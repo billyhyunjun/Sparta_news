@@ -28,7 +28,7 @@ class AccountDetailAPIView(APIView):
     # 프로필 수정
     def put(self, request):
         return Response({}, status=200)  
-     
+    
     # 회원 탈퇴
     def delete(self, request):
         return Response({}, status=200)   

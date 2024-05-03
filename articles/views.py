@@ -45,7 +45,7 @@ class CommentAPIView(APIView):
     # 댓글 수정
     def put(self, request):
         return Response({}, status=200)  
-     
+    
     # 댓글 삭제
     def delete(self, request):
         return Response({}, status=200) 
