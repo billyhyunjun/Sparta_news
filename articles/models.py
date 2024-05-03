@@ -17,7 +17,7 @@ class Article(models.Model):
     
     
 class Comment(models.Model):
-    product = models.ForeignKey(Article, related_name="comments", on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, related_name="comments", on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
