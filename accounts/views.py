@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -52,6 +52,13 @@ class LoginView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         else:
             return Response({"error": "아이디 및 비밀번호가 틀림?"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class LogoutView(APIView):
+    def post(self, request):
+        token = RefreshToken(request.data.get('refresh'))
+        token.blacklist()
+        logout(request)
+        return Response({"message": "로그아웃 인가?"}, status=status.HTTP_200_OK)
         
         
 
