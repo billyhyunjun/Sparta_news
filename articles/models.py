@@ -6,6 +6,7 @@ class Article(models.Model):
     title = models.CharField(max_length=100, blank=False, null=False)
     content = models.TextField(blank=False, null=False)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="articles")
+    url = models.URLField(blank=False, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     favorites  = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="favorite_articles")
