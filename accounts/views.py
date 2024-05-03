@@ -5,17 +5,28 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from .serializers import UserSerializer
 
 # Create your views here.
 class AccountAPIView(APIView):
     
     # 회원 가입
     def post(self, request):
-        return Response({}, status=200)
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AccountDetailAPIView(APIView):
     # 로그인상태
     permission_classes = [IsAuthenticated]
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     # 프로필 조회
     def get(self, request):
