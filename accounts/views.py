@@ -47,6 +47,8 @@ class LoginView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         else:
             return Response({"error": "아이디 및 비밀번호가 틀림?"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
 
 class AccountDetailAPIView(APIView):
     # 로그인상태
