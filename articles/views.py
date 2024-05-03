@@ -8,7 +8,6 @@ from .models import Article, Comment
 
 
 class ArticleAPIView(APIView):
-
     # 게시물 전체 조회
     def get(self, request):
         return Response({}, status=200)
