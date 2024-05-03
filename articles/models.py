@@ -9,8 +9,9 @@ class Article(models.Model):
     url = models.URLField(blank=False, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    favorites  = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="favorite_articles")
     like_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="like_articles")
+    favorites  = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="favorite_articles")
+    
     
     def __str__(self) -> str:
         return self.title
