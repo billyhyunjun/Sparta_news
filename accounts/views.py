@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -14,24 +14,18 @@ from django.contrib.auth.hashers import check_password
 from .models import PasswordQuestion
 
 # Create your views here.
-
-
 class AccountAPIView(APIView):
-
     # 회원 가입
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
-            email = serializer.validated_data['email']
 
-            # username과 email 중복 체크
+            # username중복 체크
             if User.objects.filter(username=username).exists():
-                return Response({"error": "이미 사용 중인 이름"}, status=status.HTTP_400_BAD_REQUEST)
-            if User.objects.filter(email=email).exists():
-                return Response({"error": "이미 사용 중인 이메"}, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response({"error": "이미 사용 중인 이름인데...."}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class LoginView(APIView):
@@ -42,6 +36,7 @@ class LoginView(APIView):
         if user is not None:
             login(request, user)
             
+            
             refresh_token = RefreshToken.for_user(user)
             data = {
                 'user_id': user.id,
@@ -51,17 +46,18 @@ class LoginView(APIView):
             
             return Response(data, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "아이디 및 비밀번호가 틀림?"}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({"error": "아이디 및 비밀번호가 이상한데요?"}, status=status.HTTP_400_BAD_REQUEST)
+
 class LogoutView(APIView):
     def post(self, request):
-        token = RefreshToken(request.data.get('refresh'))
-        token.blacklist()
-        logout(request)
-        return Response({"message": "로그아웃 인가?"}, status=status.HTTP_200_OK)
-        
-        
-
+        refresh_token = request.data.get('refresh_token')
+        if refresh_token:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            logout(request)
+            return Response({"message": "로그아웃 인가?"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "리프레시 토큰이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
 class AccountDetailAPIView(APIView):
     # 로그인상태
