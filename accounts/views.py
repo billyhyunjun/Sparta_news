@@ -45,14 +45,14 @@ class AccountDetailAPIView(APIView):
         if request.user != user:
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
-        # 3. get password_question
-        password_question = request.data.get("password_question")
+        # 3. get password_answer
+        password_answer = request.data.get("password_answer")
 
         # 4. Verify with user data
-        if password_question == user.password_question:
+        if password_answer == user.password_answer:
             return Response({"password": user.password}, status=status.HTTP_200_OK)
         else:
-            return Response({"Message": "wrong password_question"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"Message": "wrong password_answer"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 프로필 수정
     def put(self, request, user_id):
