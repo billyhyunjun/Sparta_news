@@ -4,14 +4,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from .serializers import ArticleSerializer
 from .models import Article, Comment
-
 
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
-        return Response({}, status=200)
-
+        articles = Article.objects.all()
+        serializer = ArticleSerializer(articles, many=True)
+        return Response(serializer.data, status=200)   
+    
     # 게시물 생성
     @permission_classes([IsAuthenticated])  # 지금 로그인 중인지
     def post(self, request):
@@ -25,7 +27,8 @@ class ArticleDetailAPIView(APIView):
 
     # 게시물 상세 조회
     def get(self, request):
-        return Response({}, status=200)
+        
+        return Response({}, status=200)  
 
     # 게시물 수정
     def put(self, request):
