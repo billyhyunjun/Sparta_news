@@ -9,12 +9,3 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "email",
         ]
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-
-        if "username" in attrs:
-            if get_user_model().objects.filter(username=attrs["username"]).exists():
-                raise serializers.ValidationError("username exists")
-
-        return attrs
