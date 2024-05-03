@@ -12,9 +12,6 @@ def create(self, validated_data):
             username=validated_data['username'],
             email=validated_data['email'],
             name=validated_data['name'],
-            nickname=validated_data['nickname'],
-            birthday=validated_data['birthday'],
-            gender=validated_data['gender'],
             password=validated_data['password']
         )
         return user
