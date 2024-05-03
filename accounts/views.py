@@ -89,7 +89,7 @@ class AccountDetailAPIView(APIView):
         user.save()
 
 
-        return Response({"Message": "User account delete successfully"}, status=status.HTTP_200_OK)
+        return Response({"Message": "User account update successfully"}, status=status.HTTP_200_OK)
 
     # 회원 탈퇴
     def delete(self, request, user_id):
