@@ -5,36 +5,21 @@ from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from .models import Article, Comment
 from rest_framework.permissions import IsAuthenticated
-<<<<<<< HEAD
 from .serializers import ArticleSerializer
 from .models import Article, Comment
-=======
 from .serializers import ArticleSerializer, CommentSerializer
-
->>>>>>> article
 
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
         articles = Article.objects.all()
         serializer = ArticleSerializer(articles, many=True)
-<<<<<<< HEAD
-        return Response(serializer.data, status=200)   
-=======
         return Response(serializer.data, status=status.HTTP_200_OK)   
->>>>>>> article
     
     # 게시물 생성
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-<<<<<<< HEAD
-        return Response({}, status=200)
-
-
-class ArticleDetailAPIView(APIView):
-
-=======
         # 로그인 여부 확인
         if not request.user.is_authenticated:
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -59,24 +44,10 @@ class ArticleDetailAPIView(APIView):
 
 class ArticleDetailAPIView(APIView):
      
->>>>>>> article
     # 로그인상태
     permission_classes = [IsAuthenticated]
 
     # 게시물 상세 조회
-<<<<<<< HEAD
-    def get(self, request):
-        
-        return Response({}, status=200)  
-
-    # 게시물 수정
-    def put(self, request):
-        return Response({}, status=200)
-
-    # 게시물 삭제
-    def delete(self, request):
-        return Response({}, status=200)
-=======
     def get(self, request, article_id):
         article = get_object_or_404(Article, pk=article_id)
         serializer = ArticleSerializer(article)
@@ -127,7 +98,6 @@ class CommentAPIView(APIView):
     
     # 로그인상태
     permission_classes = [IsAuthenticated]
->>>>>>> article
     
     # 댓글 생성
     def post(self, request, article_id):
