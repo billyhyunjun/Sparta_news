@@ -7,13 +7,14 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
 from .models import Article, Comment
 
+
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
         articles = Article.objects.all()
         serializer = ArticleSerializer(articles, many=True)
-        return Response(serializer.data, status=200)   
-    
+        return Response(serializer.data, status=200)
+
     # 게시물 생성
     @permission_classes([IsAuthenticated])  # 지금 로그인 중인지
     def post(self, request):
@@ -26,9 +27,13 @@ class ArticleDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     # 게시물 상세 조회
-    def get(self, request):
-        
-        return Response({}, status=200)  
+    def get(self, request, article_id):
+        try:
+            article = Article.objects.get(pk=article_id)
+        except Article.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = ArticleSerializer(article)
+        return Response(serializer.data, status=200)
 
     # 게시물 수정
     def put(self, request):
@@ -37,7 +42,7 @@ class ArticleDetailAPIView(APIView):
     # 게시물 삭제
     def delete(self, request):
         return Response({}, status=200)
-    
+
     # 댓글 생성
     def post(self, request, article_id):
         article = get_object_or_404(Article, pk=article_id)
@@ -71,24 +76,40 @@ class CommentAPIView(APIView):
     def put(self, request, comment_id):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
-        
+
         if not comment:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         comment.content = content
         comment.save()
-        
+
         return Response({"Message": "comment updata successfully"}, status=status.HTTP_200_OK)
 
     # 댓글 삭제
     def delete(self, request, comment_id):
-        
+
         comment = self.get_comment(comment_id)
-        
+
         if request.user != comment.author:
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        
+
         comment.delete()
-        
+
         return Response({"Message": "comment delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
+
+class SearchAPIView(APIView):
+
+    # 로그인상태
+    permission_classes = [IsAuthenticated]
+
+    # 게시물 검색
+    def get(self, request):
+        query = request.query_parms.get('q')
+        if query:
+            articles = Article.objects.filter(
+                title__icontains=query) | Article.objects.filter(content__icontains=query)
+            serializer = ArticleSerializer(articles, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)
