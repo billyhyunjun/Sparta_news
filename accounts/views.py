@@ -10,14 +10,21 @@ from .models import PasswordQuestion
 
 
 class AccountAPIView(APIView):
-
     # 회원 가입
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+            username = serializer.validated_data['username']
+
+            # username중복 체크
+            if User.objects.filter(username=username).exists():
+                return Response({"error": "이미 사용 중인 이름인데...."}, status=status.HTTP_400_BAD_REQUEST)
+
             serializer.save()
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class AccountDetailAPIView(APIView):

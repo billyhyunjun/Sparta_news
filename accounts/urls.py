@@ -1,10 +1,7 @@
 from django.urls import path
 from . import views 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenBlacklistView,
-)
+from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView,TokenBlacklistView,)
+from .views import LoginView, LogoutView
 
 app_name = "accounts"
 
@@ -16,3 +13,4 @@ urlpatterns = [
     path("password/", views.create_password, name="password"),
     path("profile/<int:user_id>/", views.AccountDetailAPIView.as_view(), name="profile"),
 ]
+
