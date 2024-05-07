@@ -1,15 +1,11 @@
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from .serializers import UserSerializer, UserDetailSerializer
-from django.contrib.auth.hashers import check_password
 from .models import PasswordQuestion
 
 
@@ -22,26 +18,6 @@ class AccountAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class LoginView(APIView):
-#     def post(self, request):
-#         username = request.data.get('username')
-#         password = request.data.get('password')
-#         user = authenticate(request, username=username, password=password)
-#         if user is not None:
-#             login(request, user)
-
-#             refresh_token = RefreshToken.for_user(user)
-#             data = {
-#                 'user_id': user.id,
-#                 'access_token': str(refresh_token.access_token),
-#                 'refresh_token': str(refresh_token)
-#             }
-
-#             return Response(data, status=status.HTTP_200_OK)
-#         else:
-#             return Response({"error": "아이디 및 비밀번호가 틀림?"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AccountDetailAPIView(APIView):
@@ -60,7 +36,7 @@ class AccountDetailAPIView(APIView):
         # 3. return user using serializer
         return Response(serializer.data, status=200)
 
-    # 비밀번호 찾기
+    # 비밀번호 변경
     def post(self, request, user_id):
         # 1. get user
         user = self.get_user(user_id)
@@ -70,12 +46,13 @@ class AccountDetailAPIView(APIView):
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
         # 3. get password_answer
-        password_question = request.data.get("password_question")
+        password_question = int(request.data.get("password_question"))
         password_answer = request.data.get("password_answer")
         new_password = request.data.get('new_password')
         confirm_password = request.data.get('confirm_password')
 
         # 4. Verify with user data
+
         if password_question == user.password_question_id:
             if password_answer == user.password_answer:
                 # 새로운 비밀번호와 확인용 비밀번호 일치 여부 확인
