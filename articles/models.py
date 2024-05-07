@@ -18,8 +18,9 @@ class Article(models.Model):
     
     
 class Comment(models.Model):
-    article = models.ForeignKey(Article, related_name="comments", on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, related_name="comments", on_delete=models.CASCADE, null=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, related_name='replies')

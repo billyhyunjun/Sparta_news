@@ -9,6 +9,7 @@ from .serializers import ArticleSerializer
 from .models import Article, Comment
 from .serializers import ArticleSerializer, CommentSerializer
 
+
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
@@ -16,8 +17,6 @@ class ArticleAPIView(APIView):
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)   
     
-    # 게시물 생성
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         # 로그인 여부 확인
@@ -44,8 +43,6 @@ class ArticleAPIView(APIView):
 
 class ArticleDetailAPIView(APIView):
      
-    # 로그인상태
-    permission_classes = [IsAuthenticated]
 
     # 게시물 상세 조회
     def get(self, request, article_id):
@@ -78,6 +75,7 @@ class ArticleDetailAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # 게시물 삭제
+
     def delete(self, request, article_id):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
@@ -92,15 +90,15 @@ class ArticleDetailAPIView(APIView):
 
         article.delete()
         return Response({"message": "게시물이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
-
-
-class CommentAPIView(APIView):
     
-    # 로그인상태
-    permission_classes = [IsAuthenticated]
-    
+
     # 댓글 생성
     def post(self, request, article_id):
+      
+        # 로그인 여부 확인
+        if not request.user.is_authenticated:
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+      
         article = get_object_or_404(Article, pk=article_id)
         content = request.data.get("content")
 
@@ -114,8 +112,8 @@ class CommentAPIView(APIView):
         )
         return Response({
             "id": comment.id,
-            "article": comment.article,
-            "author": comment.author,
+            "article": comment.article.id,
+            "author": comment.author.id,
             "content": comment.content,
         }, status=status.HTTP_201_CREATED)
 
@@ -128,28 +126,49 @@ class CommentAPIView(APIView):
     def get_comment(self, comment_id):
         return get_object_or_404(Comment, pk=comment_id)
 
+    # 대댓글 작성
+    def post(self, request, comment_id):
+        comment = self.get_comment(comment_id)
+        content = request.data.get("content")
+        
+        if content is None:
+            return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = Comment.objects.create(
+            content=content,
+            parent_comment=comment,
+            author=request.user,
+        )
+        return Response({
+            "id": comment.id,
+            "parent_comment": comment.parent_comment.id,
+            "author": comment.author.id,
+            "content": comment.content,
+        }, status=status.HTTP_201_CREATED)
+
     # 댓글 수정
     def put(self, request, comment_id):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
-        
-        if not comment:
+
+        if content is None:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         comment.content = content
         comment.save()
-        
+
         return Response({"Message": "comment updata successfully"}, status=status.HTTP_200_OK)
 
     # 댓글 삭제
+
     def delete(self, request, comment_id):
-        
+
         comment = self.get_comment(comment_id)
-        
+
         if request.user != comment.author:
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        
+
         comment.delete()
-        
+
         return Response({"Message": "comment delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
