@@ -9,6 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "email",
+
             "password",
             "password_question",
             "password_answer",
@@ -45,4 +46,3 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "username",
             "email",
         ]
-
