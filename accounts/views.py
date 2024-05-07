@@ -46,7 +46,7 @@ class LoginView(APIView):
             
             return Response(data, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "아이디 및 비밀번호가 이상한데요?"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "아이디 및 비밀번호가 이상한데요a?"}, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
     def post(self, request):
