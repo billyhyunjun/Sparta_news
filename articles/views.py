@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from .models import Article, Comment
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
-from .models import Article, Comment
+from .models import Article, Comment, ArticleView
 from .serializers import ArticleSerializer, CommentSerializer
 
 
@@ -53,6 +53,10 @@ class ArticleDetailAPIView(APIView):
             article = Article.objects.get(pk=article_id)
         except Article.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        if not ArticleView.objects.filter(article=article, user=user).exists():
+            # ArticleView에 조회 기록 추가
+            ArticleView.objects.create(article=article, user=user)
         serializer = ArticleSerializer(article)
         return Response(serializer.data, status=status.HTTP_200_OK)  
     
