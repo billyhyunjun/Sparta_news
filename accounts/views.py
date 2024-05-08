@@ -1,59 +1,30 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer
-from django.contrib.auth.hashers import check_password
+from .serializers import UserSerializer, UserDetailSerializer
 from .models import PasswordQuestion
-
-# Create your views here.
 
 
 class AccountAPIView(APIView):
-
     # 회원 가입
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
-            email = serializer.validated_data['email']
 
-            # username과 email 중복 체크
+            # username중복 체크
             if User.objects.filter(username=username).exists():
-                return Response({"error": "이미 사용 중인 이름"}, status=status.HTTP_400_BAD_REQUEST)
-            if User.objects.filter(email=email).exists():
-                return Response({"error": "이미 사용 중인 이메"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "이미 사용 중인 이름인데...."}, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.save()
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class LoginView(APIView):
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            
-            refresh_token = RefreshToken.for_user(user)
-            data = {
-                'user_id': user.id,
-                'access_token': str(refresh_token.access_token),
-                'refresh_token': str(refresh_token)
-            }
-            
-            return Response(data, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "아이디 및 비밀번호가 틀림?"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+
 
 
 class AccountDetailAPIView(APIView):
@@ -68,11 +39,11 @@ class AccountDetailAPIView(APIView):
         # 1. get user
         user = self.get_user(user_id)
         # 2. serializer userdata
-        serializer = UserSerializer(user)
+        serializer = UserDetailSerializer(user)
         # 3. return user using serializer
         return Response(serializer.data, status=200)
 
-    # 비밀번호 찾기
+    # 비밀번호 변경
     def post(self, request, user_id):
         # 1. get user
         user = self.get_user(user_id)
@@ -82,48 +53,42 @@ class AccountDetailAPIView(APIView):
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
         # 3. get password_answer
+        password_question = int(request.data.get("password_question"))
         password_answer = request.data.get("password_answer")
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
 
         # 4. Verify with user data
-        if password_answer == user.password_answer:
-            return Response({"password": user.password}, status=status.HTTP_200_OK)
+
+        if password_question == user.password_question_id:
+            if password_answer == user.password_answer:
+                # 새로운 비밀번호와 확인용 비밀번호 일치 여부 확인
+                if new_password != confirm_password:
+                    return Response({"Error": "New password and confirm password do not match"}, status=status.HTTP_400_BAD_REQUEST)
+                # save data
+                user.set_password(new_password)  # 새로운 비밀번호 설정
+                return Response({"Message": "password change successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"Message": "wrong password_answer"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"Message": "wrong password_answer"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"Message": "wrong password_question"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 프로필 수정
     def put(self, request, user_id):
         # 1. get user
         user = self.get_user(user_id)
-        
+
         # 2. check if request user is the same as the user
         if request.user != user:
             return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        
+
         # 3. Verify with data
         email = request.data.get("email")
-        current_password = request.data.get('current_password')
-        new_password = request.data.get('new_password')
-        confirm_password = request.data.get('confirm_password')
-
         if email:
-            user.email = email
+            if get_user_model().objects.filter(email=email).exists() and email != user.email:
+                return Response({"Message": "email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 현재 비밀번호 확인
-        if not check_password(current_password, user.password):
-            return Response({"Error": "Incorrect current password"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 새로운 비밀번호와 기존 비밀번호 확인
-        if new_password == current_password:
-            return Response({"Error": "New password and current_password match"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 새로운 비밀번호와 확인용 비밀번호 일치 여부 확인
-        if new_password != confirm_password:
-            return Response({"Error": "New password and confirm password do not match"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # save data
-        user.set_password(new_password) # 새로운 비밀번호 설정
         user.save()
-
 
         return Response({"Message": "User account update successfully"}, status=status.HTTP_200_OK)
 
@@ -142,12 +107,12 @@ class AccountDetailAPIView(APIView):
 
 
 @api_view(["POST"])  # POST입력만 받기
-@permission_classes([IsAuthenticated])  # 지금 로그인 중인지
+@permission_classes([IsAdminUser])  # 관리자 계정인지
 def create_password(request):
     # 암호문 생성
     question = request.data.get("question")
     if not question:
         return Response({"error": "question is required"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     question, _ = PasswordQuestion.objects.get_or_create(question=question)
     return Response({"id": question.id, "question": question.question}, status=status.HTTP_200_OK)
