@@ -6,31 +6,65 @@ from django.shortcuts import get_object_or_404
 from .models import Article, Comment
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
-from .models import Article, Comment
-from .serializers import ArticleSerializer, CommentSerializer
-
-
+from .models import Article, Comment, ArticleView
+from .serializers import ArticleSerializer, CommentSerializer, ArticleDetailSerializer
+from django.db.models import Q, Count
+from django.views.decorators.csrf import csrf_exempt
 
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
-        articles = Article.objects.all()
-        serializer = ArticleSerializer(articles, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)   
-    
+        tag = request.query_params.get("tag")
+        search = request.query_params.get("search")
+        sort = request.query_params.get("sort")
 
+        articles = Article.objects.all()
+        conditions = Q()
+
+        if tag and search:
+            if tag == "title":
+                conditions &= Q(title__icontains=search)
+            elif tag == "content":
+                conditions &= Q(content__icontains=search)
+            elif tag == "author":
+                conditions &= Q(author__username__icontains=search)
+
+        if conditions:
+            articles = articles.filter(conditions)
+
+        if sort:
+            if sort == "likes":
+                articles = articles.annotate(num_likes=Count(
+                    'like_users')).order_by('-num_likes')
+            elif sort == "views":
+                articles = articles.annotate(num_views=Count(
+                    'articleview')).order_by('-num_views')
+            elif sort == "name":
+                if tag == "title":
+                    articles = articles.order_by('title')
+                elif tag == "content":
+                    articles = articles.order_by('content')
+                elif tag == "author":
+                    articles = articles.order_by('author')
+            else:
+                return Response({"error": "sort not matched"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ArticleSerializer(articles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
+            # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 클라이언트로부터 데이터 받기
         data = request.data
-        
+
         # Serializer를 사용하여 유효성 검사 및 데이터 저장
         serializer = ArticleSerializer(data=data)
-        
+
         # 필수 요소 확인
         required_fields = ["title", "url", "content"]
         if not all(field in data for field in required_fields):
@@ -40,30 +74,37 @@ class ArticleAPIView(APIView):
             serializer.save(author=request.user)  # 현재 로그인한 사용자를 작성자로 저장
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
+            # 체크
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class ArticleDetailAPIView(APIView):
-
 
     # 게시물 상세 조회
     def get(self, request, article_id):
         try:
             article = Article.objects.get(pk=article_id)
         except Article.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = ArticleSerializer(article)
-        return Response(serializer.data, status=status.HTTP_200_OK)  
-    
+            return Response(status=status.HTTP_404_NOT_FOUND)  # 체크
+
+        user = request.user
+
+        # 조회수 추가
+        if not ArticleView.objects.filter(article=article, user=user).exists():
+            # ArticleView에 조회 기록 추가
+            ArticleView.objects.create(article=article, user=user)
+        serializer = ArticleDetailSerializer(article)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     # 게시물 수정
     def put(self, request, article_id):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
+            # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)
+        article = get_object_or_404(Article, pk=article_id)  # 체크
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
@@ -73,8 +114,8 @@ class ArticleDetailAPIView(APIView):
         data = request.data
 
         # Serializer를 사용하여 유효성 검사 및 데이터 수정
-        serializer = ArticleSerializer(article, data=data)
-        if serializer.is_valid():
+        serializer = ArticleSerializer(article, data=data, partial=True)
+        if serializer.is_valid():  # 체크 if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
@@ -84,10 +125,11 @@ class ArticleDetailAPIView(APIView):
     def delete(self, request, article_id):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
+            # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)
+        article = get_object_or_404(Article, pk=article_id)  # 체크
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
@@ -95,16 +137,18 @@ class ArticleDetailAPIView(APIView):
 
         article.delete()
         return Response({"message": "게시물이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
-    
 
     # 댓글 생성
+
     def post(self, request, article_id):
-    
+
         # 로그인 여부 확인
         if not request.user.is_authenticated:
+            # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
     
         article = get_object_or_404(Article, pk=article_id)
+
         content = request.data.get("content")
 
         if not content:
@@ -126,7 +170,7 @@ class ArticleDetailAPIView(APIView):
 class CommentAPIView(APIView):
 
     # 로그인상태
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # 체크
 
     def get_comment(self, comment_id):
         return get_object_or_404(Comment, pk=comment_id)
@@ -135,7 +179,7 @@ class CommentAPIView(APIView):
     def post(self, request, comment_id):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
-        
+
         if content is None:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -156,7 +200,9 @@ class CommentAPIView(APIView):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
 
-
+        if request.user != comment.author:
+            return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
+        
         if content is None:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -178,19 +224,33 @@ class CommentAPIView(APIView):
 
         return Response({"Message": "comment delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def like(request, article_id):
+    article = get_object_or_404(Article, id=article_id)
+    user = request.user
+    
+    if article.like_users.filter(id=user.id).exists():
+        article.like_users.remove(user.id)
+        return Response({"Message": "The article like has been cancelled."}, status=status.HTTP_200_OK)
+    else:
+        article.like_users.add(user.id)
+        return Response({"Message": "The article was liked."}, status=status.HTTP_200_OK)
 
-class SearchAPIView(APIView):
 
-    # 로그인상태
-    permission_classes = [IsAuthenticated]
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def favorite(request, article_id):
+    article =  get_object_or_404(Article, id=article_id)
+    user = request.user
+    
+    if article.favorites.filter(id=user.id).exists():
+        article.favorites.remove(user.id)
+        # 응답을 직렬화하고 반환
+        return Response({"Message": "The article favorite has been cancelled."}, status=status.HTTP_200_OK)
+    else:
+        article.favorites.add(user.id)
+        # 응답을 직렬화하고 반환
+        return Response({"Message": "The article was favorite."}, status=status.HTTP_200_OK)
 
-    # 게시물 검색
-    def get(self, request):
-        query = request.query_parms.get('q')
-        if query:
-            articles = Article.objects.filter(
-                title__icontains=query) | Article.objects.filter(content__icontains=query)
-            serializer = ArticleSerializer(articles, many=True)
-            return Response(serializer.data)
-        else:
-            return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)
+
