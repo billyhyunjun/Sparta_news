@@ -7,7 +7,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from .serializers import UserSerializer, UserDetailSerializer
-from .models import PasswordQuestion
+from .models import PasswordQuestion, User
 
 
 class AccountAPIView(APIView):
