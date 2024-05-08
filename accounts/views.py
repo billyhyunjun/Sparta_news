@@ -4,10 +4,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from .serializers import UserSerializer, UserDetailSerializer
-from django.contrib.auth.models import User
+from .models import User
 from .models import PasswordQuestion
 
 
@@ -69,6 +68,7 @@ class AccountDetailAPIView(APIView):
                     return Response({"Error": "New password and confirm password do not match"}, status=status.HTTP_400_BAD_REQUEST)
                 # save data
                 user.set_password(new_password)  # 새로운 비밀번호 설정
+                user.save()
                 return Response({"Message": "password change successfully"}, status=status.HTTP_200_OK)
             else:
                 return Response({"Message": "wrong password_answer"}, status=status.HTTP_400_BAD_REQUEST)
@@ -90,6 +90,7 @@ class AccountDetailAPIView(APIView):
             if get_user_model().objects.filter(email=email).exists() and email != user.email:
                 return Response({"Message": "email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
+        user.email = email
         user.save()
 
         return Response({"Message": "User account update successfully"}, status=status.HTTP_200_OK)
