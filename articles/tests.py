@@ -115,7 +115,7 @@ class ArticleDetailAPIViewTest(TestCase):
             title='Test Article', content='Test Content', author=self.user)
 
     # 댓글 작성을 테스트하는 메서드입니다.
-    def test_create_comment(self):  
+    def test_create_comment(self):
         url = reverse('articles:detail', kwargs={  # 'articles:detail' URL 패턴을 역으로 해석하여 URL을 생성합니다.
                       'article_id': self.article.id})
 
@@ -233,3 +233,46 @@ class CommentAPIViewTest(TestCase):
 
         self.assertEqual(response.status_code,
                          status.HTTP_403_FORBIDDEN)  # 응답 코드 확인
+
+
+class ArticleLikeAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+        self.article = Article.objects.create(
+            title='Test Article', content='Test Content', author=self.user)
+
+    def test_like_article(self):
+        url = reverse('articles:like', kwargs={'article_id': self.article.id})
+        response = self.client.post(url)  
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['Message'], 'The article was liked.')
+
+    def test_cancel_like_article(self):
+        # First, like the article
+        self.article.like_users.add(self.user)
+
+        url = reverse('articles:like', kwargs={'article_id': self.article.id})
+        response = self.client.post(url) 
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['Message'],
+                         'The article like has been cancelled.')
+
+    def test_favorite_article(self):
+        url = reverse('articles:favorite', kwargs={'article_id': self.article.id})
+        response = self.client.post(url)  
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['Message'], 'The article was favorite.')
+
+    def test_cancel_favorite_article(self):
+        # First, favorite the article
+        self.article.favorites.add(self.user)
+
+        url = reverse('articles:favorite', kwargs={'article_id': self.article.id})
+        response = self.client.post(url) 
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['Message'],
+                         'The article favorite has been cancelled.')
+

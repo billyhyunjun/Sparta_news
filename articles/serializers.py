@@ -5,10 +5,11 @@ from .models import Article, Comment, ArticleView
 class ArticleSerializer(serializers.ModelSerializer):
     like_users_count = serializers.SerializerMethodField()
     favorites_count = serializers.SerializerMethodField()
+    author_username = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
-        fields = ['id', 'title', 'content', 'url', "author",
+        fields = ['id', 'title', 'content', 'url', "author_username",
                   'like_users_count', 'favorites_count']
 
     def get_like_users_count(self, instance):
@@ -16,6 +17,9 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_favorites_count(self, instance):
         return instance.favorites.count()
+
+    def get_author_username(self, obj):
+        return obj.author.username
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -26,11 +30,28 @@ class ArticleSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    author_username = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
-        fields = ['id', 'article', 'content']
-        
+        fields = ['id', 'article', 'content', "author_username", "comments"]
+
+    def get_author_username(self, obj):
+        return obj.author.username
+    
+    def get_comments(self, obj):
+        sub_comments = Comment.objects.filter(parent_comment=obj)
+        serializer = CommentSerializer(sub_comments, many=True)
+        return serializer.data
+
+
 class ArticleDetailSerializer(ArticleSerializer):
     comments = CommentSerializer(many=True, read_only=True)
     comments_count = serializers.IntegerField(
         source="comments.count", read_only=True)
+
+    class Meta:
+        model = Article
+        fields = ['id', 'title', 'content', 'url', "author_username",
+                  'like_users_count', 'favorites_count', 'comments', 'comments_count']
