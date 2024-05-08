@@ -9,12 +9,14 @@ User = get_user_model()  # 현재 활성화된 사용자 모델을 가져옵니�
 
 
 class ArticleAPITest(TestCase):
+    # 기본 셋팅
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
             username='testuser', password='testpassword')
         self.client.force_authenticate(user=self.user)
 
+    # 게시글 생성 테스트
     def test_create_article(self):
         url = reverse('articles:article')
         data = {
@@ -25,6 +27,7 @@ class ArticleAPITest(TestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    # 게시글 비로그인 생성 테스트
     def test_create_article_unauthenticated(self):
         self.client.logout()  # Logout to make the user unauthenticated
         url = reverse('articles:article')
@@ -36,6 +39,7 @@ class ArticleAPITest(TestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    # 게시글 필수요소 탈락 테스트
     def test_create_article_missing_fields(self):
         url = reverse('articles:article')
         data = {
@@ -46,6 +50,7 @@ class ArticleAPITest(TestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    # 게시글 전체 보기 테스트
     def test_get_articles(self):
         # First, create some articles
         Article.objects.create(
@@ -58,6 +63,7 @@ class ArticleAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
+    # 게시글 필터링 테스트
     def test_get_articles_with_filtering(self):
         # First, create some articles
         Article.objects.create(
@@ -71,6 +77,7 @@ class ArticleAPITest(TestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['title'], 'Article with Author')
 
+    # 게시글 정렬 테스트
     def test_get_articles_with_sorting(self):
         # First, create some articles
         Article.objects.create(
@@ -84,6 +91,7 @@ class ArticleAPITest(TestCase):
         self.assertEqual(len(response.data), 2)
         self.assertEqual(response.data[0]['title'], 'Article 1')
 
+    # 게시글 옳지않은 정렬 입력 테스트
     def test_get_articles_with_invalid_sorting(self):
         # First, create some articles
         Article.objects.create(
@@ -97,8 +105,8 @@ class ArticleAPITest(TestCase):
 
 # ArticleDetailAPIViewTest 클래스를 정의합니다.
 class ArticleDetailAPIViewTest(TestCase):
+    # 테스트에 필요한 초기 상태를 설정합니다.
     def setUp(self):  # 각 테스트 메서드가 실행되기 전에 실행되는 설정 메서드입니다.
-        # 테스트에 필요한 초기 상태를 설정합니다.
         self.user = User.objects.create_user(
             username='testuser', password='12345')  # testuser라는 이름의 사용자를 생성합니다.
         self.client = APIClient()  # API 클라이언트를 생성합니다.
@@ -106,7 +114,8 @@ class ArticleDetailAPIViewTest(TestCase):
         self.article = Article.objects.create(  # Article 모델의 인스턴스를 생성하여 테스트할 게시물을 만듭니다.
             title='Test Article', content='Test Content', author=self.user)
 
-    def test_create_comment(self):  # 댓글 작성을 테스트하는 메서드입니다.
+    # 댓글 작성을 테스트하는 메서드입니다.
+    def test_create_comment(self):  
         url = reverse('articles:detail', kwargs={  # 'articles:detail' URL 패턴을 역으로 해석하여 URL을 생성합니다.
                       'article_id': self.article.id})
 
@@ -137,8 +146,8 @@ class ArticleDetailAPIViewTest(TestCase):
 
 
 class CommentAPIViewTest(TestCase):
+    # 테스트를 위한 초기 설정
     def setUp(self):
-        # 테스트를 위한 초기 설정
         self.user = User.objects.create_user(
             username='testuser', password='12345')  # 테스트용 유저 생성
         self.client = APIClient()  # 테스트용 클라이언트 생성
@@ -148,8 +157,8 @@ class CommentAPIViewTest(TestCase):
         self.comment = Comment.objects.create(
             content='Test Comment', author=self.user, article=self.article)  # 테스트용 댓글 생성
 
+    # 답글 생성 테스트
     def test_create_reply(self):
-        # 답글 생성 테스트
         url = reverse('articles:comment', kwargs={
                       'comment_id': self.comment.id})  # URL 생성
         data = {'content': 'Test Reply Content'}  # 생성할 답글 데이터
@@ -164,8 +173,8 @@ class CommentAPIViewTest(TestCase):
         self.assertEqual(reply.parent_comment, self.comment)  # 부모 댓글 확인
         self.assertEqual(reply.author, self.user)  # 작성자 확인
 
+    # 댓글 생성 시 content가 없는 경우 테스트
     def test_create_reply_missing_content(self):
-        # 댓글 생성 시 content가 없는 경우 테스트
         url = reverse('articles:comment', kwargs={
                       'comment_id': self.comment.id})  # URL 생성
         data = {}  # content가 빠진 데이터
@@ -176,8 +185,8 @@ class CommentAPIViewTest(TestCase):
         self.assertEqual(response.status_code,
                          status.HTTP_400_BAD_REQUEST)  # 응답 코드 확인
 
+    # 댓글 수정 테스트
     def test_update_comment(self):
-        # 댓글 수정 테스트
         url = reverse('articles:comment', kwargs={
                       'comment_id': self.comment.id})  # URL 생성
         data = {'content': 'Updated Test Comment'}  # 수정할 댓글 데이터
@@ -189,8 +198,8 @@ class CommentAPIViewTest(TestCase):
         self.assertEqual(self.comment.content,
                          'Updated Test Comment')  # 댓글 내용 확인
 
+    # 댓글 수정 시 content가 없는 경우 테스트
     def test_update_missing_content(self):
-        # 댓글 수정 시 content가 없는 경우 테스트
         url = reverse('articles:comment', kwargs={
                       'comment_id': self.comment.id})  # URL 생성
         data = {}  # content가 빠진 데이터
@@ -200,8 +209,8 @@ class CommentAPIViewTest(TestCase):
         self.assertEqual(response.status_code,
                          status.HTTP_400_BAD_REQUEST)  # 응답 코드 확인
 
+    # 댓글 삭제 테스트
     def test_delete_comment(self):
-        # 댓글 삭제 테스트
         url = reverse('articles:comment', kwargs={
                       'comment_id': self.comment.id})  # URL 생성
 
@@ -212,8 +221,8 @@ class CommentAPIViewTest(TestCase):
         self.assertFalse(Comment.objects.filter(
             pk=self.comment.id).exists())  # 댓글이 삭제되었는지 확인
 
+    # 다른 유저가 댓글 삭제 시도 시 테스트
     def test_delete_comment_wrong_user(self):
-        # 다른 유저가 댓글 삭제 시도 시 테스트
         another_user = User.objects.create_user(
             username='anotheruser', password='12345')  # 다른 유저 생성
         self.client.force_authenticate(user=another_user)  # 다른 유저로 인증 설정

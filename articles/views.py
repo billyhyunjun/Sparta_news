@@ -7,7 +7,7 @@ from .models import Article, Comment
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
 from .models import Article, Comment, ArticleView
-from .serializers import ArticleSerializer, CommentSerializer
+from .serializers import ArticleSerializer, CommentSerializer, ArticleDetailSerializer
 from django.db.models import Q, Count
 
 
@@ -48,7 +48,7 @@ class ArticleAPIView(APIView):
                     articles = articles.order_by('author')
             else:
                 return Response({"error": "sort not matched"},
-                         status=status.HTTP_400_BAD_REQUEST)
+                                status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -56,23 +56,25 @@ class ArticleAPIView(APIView):
     def post(self, request):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
+            # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 클라이언트로부터 데이터 받기
-        data = request.data
+        article = request.data
 
         # Serializer를 사용하여 유효성 검사 및 데이터 저장
-        serializer = ArticleSerializer(data=data)
+        serializer = ArticleSerializer(article)
 
         # 필수 요소 확인
         required_fields = ["title", "url", "content"]
-        if not all(field in data for field in required_fields):
+        if not all(field in article for field in required_fields):
             return Response({"error": "필수 요소가 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         if serializer.is_valid():
             serializer.save(author=request.user)  # 현재 로그인한 사용자를 작성자로 저장
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
+            # 체크
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -83,23 +85,25 @@ class ArticleDetailAPIView(APIView):
         try:
             article = Article.objects.get(pk=article_id)
         except Article.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_404_NOT_FOUND)  # 체크
+
         user = request.user
+
         # 조회수 추가
         if not ArticleView.objects.filter(article=article, user=user).exists():
             # ArticleView에 조회 기록 추가
             ArticleView.objects.create(article=article, user=user)
-        serializer = ArticleSerializer(article)
+        serializer = ArticleDetailSerializer(article)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 수정
     def put(self, request, article_id):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED) # 체크
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)
+        article = get_object_or_404(Article, pk=article_id)  # 체크
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
@@ -110,20 +114,20 @@ class ArticleDetailAPIView(APIView):
 
         # Serializer를 사용하여 유효성 검사 및 데이터 수정
         serializer = ArticleSerializer(article, data=data)
-        if serializer.is_valid():
+        if serializer.is_valid():  # 체크
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
 
     # 게시물 삭제
     def delete(self, request, article_id):
         # 로그인 여부 확인
         if not request.user.is_authenticated:
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)  # 체크
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)
+        article = get_object_or_404(Article, pk=article_id)  # 체크
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
@@ -138,9 +142,10 @@ class ArticleDetailAPIView(APIView):
 
         # 로그인 여부 확인
         if not request.user.is_authenticated:
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)  # 체크
 
-        article = get_object_or_404(Article, pk=article_id)
+        article = get_object_or_404(Article, pk=article_id)  # 체크
+        
         content = request.data.get("content")
 
         if not content:
@@ -162,7 +167,7 @@ class ArticleDetailAPIView(APIView):
 class CommentAPIView(APIView):
 
     # 로그인상태
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # 체크
 
     def get_comment(self, comment_id):
         return get_object_or_404(Comment, pk=comment_id)
@@ -214,18 +219,18 @@ class CommentAPIView(APIView):
         return Response({"Message": "comment delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
-class SearchAPIView(APIView):
+# class SearchAPIView(APIView):
 
-    # 로그인상태
-    permission_classes = [IsAuthenticated]
+#     # 로그인상태
+#     permission_classes = [IsAuthenticated]
 
-    # 게시물 검색
-    def get(self, request):
-        query = request.query_parms.get('q')
-        if query:
-            articles = Article.objects.filter(
-                title__icontains=query) | Article.objects.filter(content__icontains=query)
-            serializer = ArticleSerializer(articles, many=True)
-            return Response(serializer.data)
-        else:
-            return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)
+#     # 게시물 검색
+#     def get(self, request):
+#         query = request.query_parms.get('q')
+#         if query:
+#             articles = Article.objects.filter(
+#                 title__icontains=query) | Article.objects.filter(content__icontains=query)
+#             serializer = ArticleSerializer(articles, many=True)
+#             return Response(serializer.data)
+#         else:
+#             return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)

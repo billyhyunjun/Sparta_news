@@ -8,7 +8,7 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Article
-        fields = ['id', 'title', 'content', 'url',
+        fields = ['id', 'title', 'content', 'url', "author",
                   'like_users_count', 'favorites_count']
 
     def get_like_users_count(self, instance):
@@ -29,3 +29,8 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'article', 'content']
+        
+class ArticleDetailSerializer(ArticleSerializer):
+    comments = CommentSerializer(many=True, read_only=True)
+    comments_count = serializers.IntegerField(
+        source="comments.count", read_only=True)

@@ -8,6 +8,7 @@ User = get_user_model()  # 현재 활성화된 사용자 모델을 가져옵니�
 
 
 class AccountAPITest(TestCase):
+    # 기본 셋팅
     def setUp(self):
         self.client = APIClient()
         self.admin_user = User.objects.create_superuser(
@@ -24,8 +25,8 @@ class AccountAPITest(TestCase):
         # 모든 테스트에 사용할 사용자로 로그인
         self.client.force_authenticate(user=self.user)
 
+    # 관리자로 로그인
     def test_create_password_question(self):
-        # 관리자로 로그인
         self.client.force_authenticate(user=self.admin_user)
 
         # 유효한 질문을 포함하여 암호 질문 생성 (절대 경로로 수정)
@@ -38,8 +39,8 @@ class AccountAPITest(TestCase):
             question='What is your favorite color?')
         self.assertIsNotNone(created_question)
 
+    # 비밀번호 변경 요청
     def test_change_password(self):
-        # 비밀번호 변경 요청
         change_data = {
             'password_question': self.password_question.id,
             'password_answer': 'Test Answer',
@@ -55,15 +56,15 @@ class AccountAPITest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    # 프로필 업데이트 요청
     def test_profile_update(self):
-        # 프로필 업데이트 요청
         update_data = {'email': 'new_email@example.com'}
         response = self.client.put(
             f'/api/accounts/profile/{self.user.id}/', update_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    # 계정 삭제 요청
     def test_delete_account(self):
-        # 계정 삭제 요청
         response = self.client.delete(
             f'/api/accounts/profile/{self.user.id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
