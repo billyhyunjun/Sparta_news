@@ -146,8 +146,8 @@ class ArticleDetailAPIView(APIView):
         if not request.user.is_authenticated:
             # 체크
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        article = get_object_or_404(Article, pk=article_id)  # 체크
+    
+        article = get_object_or_404(Article, pk=article_id)
 
         content = request.data.get("content")
 
@@ -254,24 +254,3 @@ def favorite(request, article_id):
         return Response({"Message": "The article was favorite."}, status=status.HTTP_200_OK)
 
 
-
-
-
-
-
-
-# class SearchAPIView(APIView):
-
-#     # 로그인상태
-#     permission_classes = [IsAuthenticated]
-
-#     # 게시물 검색
-#     def get(self, request):
-#         query = request.query_parms.get('q')
-#         if query:
-#             articles = Article.objects.filter(
-#                 title__icontains=query) | Article.objects.filter(content__icontains=query)
-#             serializer = ArticleSerializer(articles, many=True)
-#             return Response(serializer.data)
-#         else:
-#             return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)

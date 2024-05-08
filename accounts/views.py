@@ -7,7 +7,8 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from .serializers import UserSerializer, UserDetailSerializer
-from .models import PasswordQuestion, User
+from django.contrib.auth.models import User
+from .models import PasswordQuestion
 
 
 class AccountAPIView(APIView):
@@ -19,7 +20,7 @@ class AccountAPIView(APIView):
 
             # username중복 체크
             if User.objects.filter(username=username).exists():
-                return Response({"error": "이미 사용 중인 이름인데...."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "This name is already in use"}, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.save()
 
