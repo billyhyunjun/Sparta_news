@@ -14,6 +14,9 @@ class UserSerializer(serializers.ModelSerializer):
             "password_question",
             "password_answer",
         ]
+        extra_kwargs = {
+            'password': {'write_only': True},
+        }
         
     def create(self, validated_data):
         # 받아온 비밀번호를 해시로 변환

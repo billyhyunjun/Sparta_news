@@ -99,11 +99,11 @@ class ArticleDetailAPIView(APIView):
 
     # 댓글 생성
     def post(self, request, article_id):
-      
+    
         # 로그인 여부 확인
         if not request.user.is_authenticated:
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
-      
+    
         article = get_object_or_404(Article, pk=article_id)
         content = request.data.get("content")
 
