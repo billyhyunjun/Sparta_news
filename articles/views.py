@@ -105,11 +105,24 @@ class SearchAPIView(APIView):
 
     # 게시물 검색
     def get(self, request):
-        query = request.query_parms.get('q')
-        if query:
+        search_query = request.query_parms.get("query", "")
+        sort_by = request.query_params.get("sort_by", "data")
+        if search_query:
             articles = Article.objects.filter(
-                title__icontains=query) | Article.objects.filter(content__icontains=query)
+                title__icontains=search_query) | Article.objects.filter(content__icontains=search_query)
+
+            # 제목, 내용, 작성일 기준에 따라 정렬
+            if sort_by == "title":
+                articles = articles.order_by("title")
+            elif sort_by == "content":
+                articles = articles.order_by("content")
+            else:
+                articles = articles.order_by("-created_at")
+
+            # 정확도순으로 정렬
+            articles = sorted(articles, key=lambda q: (
+                q.title.count(search_query) + q.content.count(search_query)), reverse=True)
             serializer = ArticleSerializer(articles, many=True)
             return Response(serializer.data)
         else:
-            return Response({"detail": "검색어를 입려갛세요."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "검색어를 입력하세요."}, status=status.HTTP_400_BAD_REQUEST)
