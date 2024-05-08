@@ -33,11 +33,9 @@ class ArticleAPIView(APIView):
 
         if sort:
             if sort == "likes":
-                articles = articles.annotate(num_likes=Count(
-                    'like_users')).order_by('-num_likes')
+                articles = articles.order_by('-like_users_count')
             elif sort == "views":
-                articles = articles.annotate(num_views=Count(
-                    'articleview')).order_by('-num_views')
+                articles = articles.order_by('-article_views')
             elif sort == "name":
                 if tag == "title":
                     articles = articles.order_by('title')
