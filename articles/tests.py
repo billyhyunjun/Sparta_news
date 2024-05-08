@@ -1,3 +1,4 @@
+from .models import Article
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -5,6 +6,93 @@ from rest_framework.test import APIClient
 from .models import Article, Comment  # Article과 Comment 모델을 불러옵니다.
 from django.contrib.auth import get_user_model
 User = get_user_model()  # 현재 활성화된 사용자 모델을 가져옵니다.
+
+
+class ArticleAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_article(self):
+        url = reverse('articles:article')
+        data = {
+            'title': 'Test Article',
+            'url': 'https://example.com',
+            'content': 'This is a test article content.'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_article_unauthenticated(self):
+        self.client.logout()  # Logout to make the user unauthenticated
+        url = reverse('articles:article')
+        data = {
+            'title': 'Test Article',
+            'url': 'https://example.com',
+            'content': 'This is a test article content.'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_article_missing_fields(self):
+        url = reverse('articles:article')
+        data = {
+            'title': 'Test Article',
+            'content': 'This is a test article content.'
+            # 'url' field is missing intentionally to test missing fields scenario
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_articles(self):
+        # First, create some articles
+        Article.objects.create(
+            title='Article 1', url='https://example.com/1', content='Content 1', author=self.user)
+        Article.objects.create(
+            title='Article 2', url='https://example.com/2', content='Content 2', author=self.user)
+
+        url = reverse('articles:article')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_articles_with_filtering(self):
+        # First, create some articles
+        Article.objects.create(
+            title='Article with Tag', url='https://example.com/tag', content='Content 1', author=self.user)
+        Article.objects.create(title='Article with Author',
+                               url='https://example.com/author', content='Content 2', author=self.user)
+
+        url = reverse('articles:article')
+        response = self.client.get(url, {'tag': 'title', 'search': 'Author'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['title'], 'Article with Author')
+
+    def test_get_articles_with_sorting(self):
+        # First, create some articles
+        Article.objects.create(
+            title='Article 1', url='https://example.com/1', content='Content 1', author=self.user)
+        Article.objects.create(
+            title='Article 2', url='https://example.com/2', content='Content 2', author=self.user)
+
+        url = reverse('articles:article')
+        response = self.client.get(url, {'sort': 'name'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]['title'], 'Article 1')
+
+    def test_get_articles_with_invalid_sorting(self):
+        # First, create some articles
+        Article.objects.create(
+            title='Article 1', url='https://example.com/1', content='Content 1', author=self.user)
+
+        url = reverse('articles:article')
+        # Passing invalid sort parameter
+        response = self.client.get(url, {'sort': 'invalid_sort'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 # ArticleDetailAPIViewTest 클래스를 정의합니다.

@@ -8,17 +8,50 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
 from .models import Article, Comment, ArticleView
 from .serializers import ArticleSerializer, CommentSerializer
-
+from django.db.models import Q, Count
 
 
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
     def get(self, request):
-        articles = Article.objects.all()
-        serializer = ArticleSerializer(articles, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)   
-    
+        tag = request.query_params.get("tag")
+        search = request.query_params.get("search")
+        sort = request.query_params.get("sort")
 
+        articles = Article.objects.all()
+        conditions = Q()
+
+        if tag and search:
+            if tag == "title":
+                conditions &= Q(title__icontains=search)
+            elif tag == "content":
+                conditions &= Q(content__icontains=search)
+            elif tag == "author":
+                conditions &= Q(author__username__icontains=search)
+
+        if conditions:
+            articles = articles.filter(conditions)
+
+        if sort:
+            if sort == "likes":
+                articles = articles.annotate(num_likes=Count(
+                    'like_users')).order_by('-num_likes')
+            elif sort == "views":
+                articles = articles.annotate(num_views=Count(
+                    'articleview')).order_by('-num_views')
+            elif sort == "name":
+                if tag == "title":
+                    articles = articles.order_by('title')
+                elif tag == "content":
+                    articles = articles.order_by('content')
+                elif tag == "author":
+                    articles = articles.order_by('author')
+            else:
+                return Response({"error": "sort not matched"},
+                         status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ArticleSerializer(articles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         # 로그인 여부 확인
@@ -27,10 +60,10 @@ class ArticleAPIView(APIView):
 
         # 클라이언트로부터 데이터 받기
         data = request.data
-        
+
         # Serializer를 사용하여 유효성 검사 및 데이터 저장
         serializer = ArticleSerializer(data=data)
-        
+
         # 필수 요소 확인
         required_fields = ["title", "url", "content"]
         if not all(field in data for field in required_fields):
@@ -43,9 +76,7 @@ class ArticleAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class ArticleDetailAPIView(APIView):
-
 
     # 게시물 상세 조회
     def get(self, request, article_id):
@@ -54,12 +85,13 @@ class ArticleDetailAPIView(APIView):
         except Article.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         user = request.user
+        # 조회수 추가
         if not ArticleView.objects.filter(article=article, user=user).exists():
             # ArticleView에 조회 기록 추가
             ArticleView.objects.create(article=article, user=user)
         serializer = ArticleSerializer(article)
-        return Response(serializer.data, status=status.HTTP_200_OK)  
-    
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     # 게시물 수정
     def put(self, request, article_id):
         # 로그인 여부 확인
@@ -99,15 +131,15 @@ class ArticleDetailAPIView(APIView):
 
         article.delete()
         return Response({"message": "게시물이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
-    
 
     # 댓글 생성
+
     def post(self, request, article_id):
-      
+
         # 로그인 여부 확인
         if not request.user.is_authenticated:
             return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
-      
+
         article = get_object_or_404(Article, pk=article_id)
         content = request.data.get("content")
 
@@ -139,7 +171,7 @@ class CommentAPIView(APIView):
     def post(self, request, comment_id):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
-        
+
         if content is None:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -159,7 +191,6 @@ class CommentAPIView(APIView):
     def put(self, request, comment_id):
         comment = self.get_comment(comment_id)
         content = request.data.get("content")
-
 
         if content is None:
             return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
