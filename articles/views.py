@@ -4,13 +4,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from .models import Article, Comment
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from .serializers import ArticleSerializer
 from .models import Article, Comment, ArticleView
 from .serializers import ArticleSerializer, ArticleDetailSerializer
 from django.db.models import Q, Count
 
 class ArticleAPIView(APIView):
+    
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
     # 게시물 전체 조회
     def get(self, request):
         tag = request.query_params.get("tag")
@@ -50,7 +53,6 @@ class ArticleAPIView(APIView):
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @permission_classes([IsAuthenticated])
     def post(self, request):
 
         # 클라이언트로부터 데이터 받기
@@ -89,7 +91,6 @@ class ArticleDetailAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 수정
-    @permission_classes([IsAuthenticated])
     def put(self, request, article_id):
 
         # 게시물 존재 여부 확인
@@ -109,7 +110,6 @@ class ArticleDetailAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 삭제
-    @permission_classes([IsAuthenticated])
     def delete(self, request, article_id):
 
         # 게시물 존재 여부 확인
@@ -123,7 +123,6 @@ class ArticleDetailAPIView(APIView):
         return Response({"message": "article delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
     # 댓글 생성
-    @permission_classes([IsAuthenticated])
     def post(self, request, article_id):
     
         article = self.get_article(article_id)

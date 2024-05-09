@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
@@ -14,12 +14,19 @@ class AccountAPIView(APIView):
     # 회원 가입
     def post(self, request):
         serializer = UserSerializer(data=request.data)
+        
         if serializer.is_valid():
             username = serializer.validated_data['username']
-
+            email = serializer.validated_data['email']
+            
+            
             # username중복 체크
             if User.objects.filter(username=username).exists():
                 return Response({"error": "This name is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if email:
+                if get_user_model().objects.filter(email=email).exists():
+                    return Response({"Message": "email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.save()
 
