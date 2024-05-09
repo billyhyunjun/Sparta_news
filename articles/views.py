@@ -7,9 +7,8 @@ from .models import Article, Comment
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ArticleSerializer
 from .models import Article, Comment, ArticleView
-from .serializers import ArticleSerializer, CommentSerializer, ArticleDetailSerializer
+from .serializers import ArticleSerializer, ArticleDetailSerializer
 from django.db.models import Q, Count
-from django.views.decorators.csrf import csrf_exempt
 
 class ArticleAPIView(APIView):
     # 게시물 전체 조회
@@ -34,11 +33,9 @@ class ArticleAPIView(APIView):
 
         if sort:
             if sort == "likes":
-                articles = articles.annotate(num_likes=Count(
-                    'like_users')).order_by('-num_likes')
+                articles = articles.order_by('-like_users_count')
             elif sort == "views":
-                articles = articles.annotate(num_views=Count(
-                    'articleview')).order_by('-num_views')
+                articles = articles.order_by('-article_views')
             elif sort == "name":
                 if tag == "title":
                     articles = articles.order_by('title')
@@ -52,12 +49,9 @@ class ArticleAPIView(APIView):
 
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+    
+    @permission_classes([IsAuthenticated])
     def post(self, request):
-        # 로그인 여부 확인
-        if not request.user.is_authenticated:
-            # 체크
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 클라이언트로부터 데이터 받기
         data = request.data
@@ -68,24 +62,22 @@ class ArticleAPIView(APIView):
         # 필수 요소 확인
         required_fields = ["title", "url", "content"]
         if not all(field in data for field in required_fields):
-            return Response({"error": "필수 요소가 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "need required_fields(title, url, content)."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save(author=request.user)  # 현재 로그인한 사용자를 작성자로 저장
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            # 체크
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ArticleDetailAPIView(APIView):
+    
+    def get_article(self, article_id):
+        return get_object_or_404(Article, pk=article_id)
 
     # 게시물 상세 조회
     def get(self, request, article_id):
-        try:
-            article = Article.objects.get(pk=article_id)
-        except Article.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)  # 체크
+        
+        article = self.get_article(article_id)
 
         user = request.user
 
@@ -97,57 +89,44 @@ class ArticleDetailAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 수정
+    @permission_classes([IsAuthenticated])
     def put(self, request, article_id):
-        # 로그인 여부 확인
-        if not request.user.is_authenticated:
-            # 체크
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)  # 체크
+        article = self.get_article(article_id)
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
-            return Response({"error": "게시물 수정 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
         # 클라이언트로부터 데이터 받기
         data = request.data
 
         # Serializer를 사용하여 유효성 검사 및 데이터 수정
         serializer = ArticleSerializer(article, data=data, partial=True)
-        if serializer.is_valid():  # 체크 if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=True):  
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # 게시물 삭제
+    @permission_classes([IsAuthenticated])
     def delete(self, request, article_id):
-        # 로그인 여부 확인
-        if not request.user.is_authenticated:
-            # 체크
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 게시물 존재 여부 확인
-        article = get_object_or_404(Article, pk=article_id)  # 체크
+        article = self.get_article(article_id)
 
         # 프로필 유저와 로그인 유저가 일치하는지 확인
         if request.user != article.author:
-            return Response({"error": "게시물 삭제 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
         article.delete()
-        return Response({"message": "게시물이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"message": "article delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
     # 댓글 생성
-
+    @permission_classes([IsAuthenticated])
     def post(self, request, article_id):
-
-        # 로그인 여부 확인
-        if not request.user.is_authenticated:
-            # 체크
-            return Response({"error": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
     
-        article = get_object_or_404(Article, pk=article_id)
+        article = self.get_article(article_id)
 
         content = request.data.get("content")
 
@@ -170,7 +149,7 @@ class ArticleDetailAPIView(APIView):
 class CommentAPIView(APIView):
 
     # 로그인상태
-    permission_classes = [IsAuthenticated]  # 체크
+    permission_classes = [IsAuthenticated]
 
     def get_comment(self, comment_id):
         return get_object_or_404(Comment, pk=comment_id)

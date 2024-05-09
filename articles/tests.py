@@ -29,7 +29,8 @@ class ArticleAPITest(TestCase):
 
     # 게시글 비로그인 생성 테스트
     def test_create_article_unauthenticated(self):
-        self.client.logout()  # Logout to make the user unauthenticated
+        # Logout to make the user unauthenticated
+        self.client.logout()  
         url = reverse('articles:article')
         data = {
             'title': 'Test Article',
@@ -38,6 +39,7 @@ class ArticleAPITest(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
     # 게시글 필수요소 탈락 테스트
     def test_create_article_missing_fields(self):
