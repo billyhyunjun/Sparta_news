@@ -22,7 +22,7 @@ class ArticleAPIView(APIView):
 
         articles = Article.objects.all()
         conditions = Q()
-
+        
         if tag and search:
             if tag == "title":
                 conditions &= Q(title__icontains=search)
@@ -36,9 +36,9 @@ class ArticleAPIView(APIView):
 
         if sort:
             if sort == "likes":
-                articles = articles.order_by('-like_users_count')
+                articles = articles.annotate(num_likes=Count('like_users')).order_by('-num_likes')
             elif sort == "views":
-                articles = articles.order_by('-article_views')
+                articles = articles.annotate(num_views=Count('views')).order_by('-num_views')
             elif sort == "name":
                 if tag == "title":
                     articles = articles.order_by('title')
