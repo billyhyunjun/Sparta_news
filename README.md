@@ -1,4 +1,4 @@
-# Sparta_news
+# Sparta_news [잠궈]
 [2024.05.10] 심화프로젝트 : Django DRF를 활용, API 뉴스 사이트를 구현하라
 
 ### :calendar: **개발기간**
