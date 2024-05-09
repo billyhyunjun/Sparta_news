@@ -17,7 +17,7 @@ class AccountAPIView(APIView):
         if serializer.is_valid():
             username = serializer.validated_data['username']
 
-            # username중복 체크
+            # username중복 체크ㅁ
             if User.objects.filter(username=username).exists():
                 return Response({"error": "This name is already in use"}, status=status.HTTP_400_BAD_REQUEST)
 
