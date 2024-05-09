@@ -4,13 +4,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from .models import Article, Comment
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from .serializers import ArticleSerializer
 from .models import Article, Comment, ArticleView
 from .serializers import ArticleSerializer, ArticleDetailSerializer
 from django.db.models import Q, Count
 
 class ArticleAPIView(APIView):
+    
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
     # 게시물 전체 조회
     def get(self, request):
         tag = request.query_params.get("tag")
@@ -19,7 +22,7 @@ class ArticleAPIView(APIView):
 
         articles = Article.objects.all()
         conditions = Q()
-
+        
         if tag and search:
             if tag == "title":
                 conditions &= Q(title__icontains=search)
@@ -33,9 +36,9 @@ class ArticleAPIView(APIView):
 
         if sort:
             if sort == "likes":
-                articles = articles.order_by('-like_users_count')
+                articles = articles.annotate(num_likes=Count('like_users')).order_by('-num_likes')
             elif sort == "views":
-                articles = articles.order_by('-article_views')
+                articles = articles.annotate(num_views=Count('views')).order_by('-num_views')
             elif sort == "name":
                 if tag == "title":
                     articles = articles.order_by('title')
@@ -50,7 +53,6 @@ class ArticleAPIView(APIView):
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @permission_classes([IsAuthenticated])
     def post(self, request):
 
         # 클라이언트로부터 데이터 받기
@@ -89,7 +91,6 @@ class ArticleDetailAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 수정
-    @permission_classes([IsAuthenticated])
     def put(self, request, article_id):
 
         # 게시물 존재 여부 확인
@@ -109,7 +110,6 @@ class ArticleDetailAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 게시물 삭제
-    @permission_classes([IsAuthenticated])
     def delete(self, request, article_id):
 
         # 게시물 존재 여부 확인
@@ -123,7 +123,6 @@ class ArticleDetailAPIView(APIView):
         return Response({"message": "article delete successfully"}, status=status.HTTP_204_NO_CONTENT)
 
     # 댓글 생성
-    @permission_classes([IsAuthenticated])
     def post(self, request, article_id):
     
         article = self.get_article(article_id)
