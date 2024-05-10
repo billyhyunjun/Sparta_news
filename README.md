@@ -5,8 +5,8 @@
 - 2024.05.03 ~ 2024/05.10 (5일)
 
 ### 포지션
-- 박현준 : accounts, 영상제작, 총괄
-- 박우영 : accounts, article, 발표
+- 박현준 : accounts, article, 영상제작, 총괄
+- 박우영 : accounts, 발표
 - 홍순호 : article, S.A.
 - 용석민 : article, readme
 
